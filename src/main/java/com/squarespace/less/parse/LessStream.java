@@ -16,6 +16,7 @@
 
 package com.squarespace.less.parse;
 
+import static com.squarespace.less.core.SyntaxErrorMaker.bug;
 import static com.squarespace.less.core.SyntaxErrorMaker.incompleteParse;
 
 import java.nio.file.Path;
@@ -65,8 +66,6 @@ public class LessStream extends Stream {
   private final Path fileName;
 
   private int matchEnd = -1;
-  private Mark tokenPosition = new Mark();
-  private Mark position = new Mark();
   private String token;
 
   public LessStream(LessContext ctx, String raw) {
@@ -132,6 +131,9 @@ public class LessStream extends Stream {
     if (peek() != Chars.EOF) {
       throw parseError(new LessException(incompleteParse()));
     }
+    if (marksptr > 1) {
+      throw parseError(new LessException(bug("Marks > 1")));
+    }
   }
 
   /**
@@ -140,16 +142,16 @@ public class LessStream extends Stream {
   public Node parse(Parselet[] parselets) throws LessException {
     skipWs();
     Node result = null;
-    Mark pos = mark();
+    int[] pos = mark();
     for (Parselet parselet : parselets) {
       result = parselet.parse(this);
       if (result != null) {
-        result.setLineOffset(pos.lineOffset);
-        result.setCharOffset(pos.charOffset);
-        mark(position);
+        result.setLineOffset(pos[1]);
+        result.setCharOffset(pos[2]);
         break;
       }
     }
+    popMark();
     return result;
   }
 
@@ -308,9 +310,6 @@ public class LessStream extends Stream {
   }
 
   private void set(int start, int end) {
-    tokenPosition.index = start;
-    tokenPosition.lineOffset = lineOffset;
-    tokenPosition.charOffset = charOffset;
     token = raw.substring(start, end);
   }
 

@@ -25,8 +25,9 @@ public class UrlParselet implements Parselet {
 
   @Override
   public Node parse(LessStream stm) throws LessException {
-    Mark mark = stm.mark();
+    int[] mark = stm.mark();
     if (!CharClass.callStart(stm.peek()) || !stm.matchCallName()) {
+      stm.popMark();
       return null;
     }
     String name = stm.token();
@@ -34,12 +35,14 @@ public class UrlParselet implements Parselet {
     if (nameLC.equals("url")) {
       Node result = FunctionCallParselet.parseUrl(stm);
       if (result != null) {
+        stm.popMark();
         return result;
       }
     }
 
     // Unreachable since parseUrl will throw if url(..) is invalid.
     stm.restore(mark);
+    stm.popMark();
     return null;
   }
 
